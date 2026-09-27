@@ -1,0 +1,10 @@
+{
+  "name": "qvac-baby-name-finder",
+  "version": "1.0.0",
+  "description": "Baby Name Finder: search names by their meaning ('light', 'brave', 'the sea') and find names from many cultures that fit, with a shortlist. Uses on-device QVAC embeddings.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@qvac/sdk": "^0.19.0" },
+  "license": "MIT"
+}
