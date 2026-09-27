@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baby Name Finder</title>
+<style>
+  :root { --bg: #fdf8f4; --ink: #33261d; --muted: #82705f; --line: #f0e2d4; --card: #fff; --pink: #e64980; --blue: #339af0; --mint: #20c997; --gold: #f59f00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 26px 16px 56px; }
+  h1 { font: 700 38px/1.1 Georgia, serif; margin: 0; text-align: center; } h1 span { color: var(--pink); font-style: italic; } .sub { color: var(--muted); margin: 6px 0 8px; text-align: center; }
+  #status { font-size: 13px; color: var(--muted); margin: 0 0 14px; text-align: center; } #status.ok { color: #2b8a3e; } #status.err { color: #c92a2a; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; margin-bottom: 16px; } .panel h2 { font-size: 18px; margin: 0 0 8px; }
+  .search { display: flex; gap: 8px; flex-wrap: wrap; } .search input { flex: 1 1 260px; font: 19px Georgia, serif; padding: 12px 16px; border: 2px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); min-width: 0; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid #fcc2d7; outline-offset: 2px; }
+  select { font: inherit; padding: 8px 10px; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; } .chips button { background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; font-size: 14px; font-weight: 600; }
+  button { font: inherit; font-weight: 700; padding: 11px 20px; border: 0; border-radius: 12px; background: var(--pink); color: #fff; cursor: pointer; }
+  button.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); padding: 5px 11px; font-size: 13px; } button.busy { opacity: .55; cursor: progress; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; } .note { color: var(--muted); font-size: 14px; min-height: 20px; margin: 8px 0 0; text-align: center; }
+  .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .nm { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center; } .nm.top { border: 2px solid var(--gold); }
+  .nm b { font: 700 28px Georgia, serif; } .nm .g { font-size: 12px; font-weight: 800; border-radius: 99px; padding: 1px 10px; color: #fff; } .g.girl { background: var(--pink); } .g.boy { background: var(--blue); } .g.unisex { background: var(--mint); }
+  .nm .m { font-style: italic; } .nm .o { color: var(--muted); font-size: 13px; }
+  #src { color: var(--muted); font-size: 14px; text-align: center; } .fine { color: var(--muted); font-size: 13px; text-align: center; }
+  .short { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); } .short b { font: 700 20px Georgia, serif; min-width: 110px; } .short span { flex: 1; color: var(--muted); font-size: 14px; } .short .stars button { background: none; border: 0; padding: 0 1px; font-size: 20px; color: #dee2e6; } .short .stars button.on { color: var(--gold); }
+  .try { font: 20px Georgia, serif; text-align: center; margin: 8px 0 0; } .empty { color: var(--muted); } .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Baby Name <span>Finder</span></h1>
+  <p class="sub">Search names by what they mean. Find names from many cultures, then build your shortlist.</p>
+  <p id="status">Checking name search...</p>
+  <section class="panel">
+    <div class="search"><input id="q" placeholder="A meaning you love: light, brave, the sea, peace..." maxlength="200" autocomplete="off" aria-label="Meaning"><button id="go">Find names</button></div>
+    <div class="chips" id="chips"></div>
+    <div class="row"><label for="gender">For</label><select id="gender"><option value="any">Any</option><option value="girl">Girl</option><option value="boy">Boy</option><option value="unisex">Unisex only</option></select>
+      <label for="letter">Starting with</label><select id="letter"><option value="">Any letter</option></select></div>
+    <p class="note" id="note"></p>
+  </section>
+  <section id="results" class="hidden"><p id="src" aria-live="polite"></p><div class="names" id="list"></div>
+    <p class="fine">Name meanings can differ between sources and cultures. These are the most common explanations.</p></section>
+  <section class="panel" style="margin-top:16px"><h2>💛 Our shortlist</h2><div id="shortlist"></div>
+    <div class="row"><label for="surname">Try with a last name:</label><input id="surname" placeholder="Last name" maxlength="40" autocomplete="off" style="font:inherit;padding:8px 10px;border:2px solid var(--line);border-radius:10px"><button class="ghost" id="copy">Copy shortlist</button></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PICKS = ["light", "brave", "the sea", "peace", "joy and happiness", "the moon and stars", "nature and trees", "flowers", "wisdom", "strength"];
+let names = [], busy = false, pending = false, ai = { ready: false, message: "Loading...", percent: null, error: null };
+let shortlist = []; try { shortlist = JSON.parse(localStorage.getItem("nameShortlist") || "[]"); $("surname").value = localStorage.getItem("nameSurname") || ""; } catch {}
+const persist = () => { try { localStorage.setItem("nameShortlist", JSON.stringify(shortlist)); localStorage.setItem("nameSurname", $("surname").value); } catch {} };
+PICKS.forEach((p) => { const b = document.createElement("button"); b.textContent = p; b.addEventListener("click", () => { $("q").value = p; find(); }); $("chips").append(b); });
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((l) => { const o = document.createElement("option"); o.value = l; o.textContent = l; $("letter").append(o); });
+["gender", "letter"].forEach((id) => $(id).addEventListener("change", () => { if ($("q").value.trim()) find(); }));
+
+function card(i, top) {
+  const n = names[i], d = document.createElement("div"); d.className = "nm" + (top ? " top" : ""); const b = document.createElement("b"); b.textContent = n.name; const g = document.createElement("span"); g.className = "g " + n.g; g.textContent = n.g;
+  const m = document.createElement("span"); m.className = "m"; m.textContent = "\u201c" + n.meaning + "\u201d"; const o = document.createElement("span"); o.className = "o"; o.textContent = n.origin;
+  const on = shortlist.some((s) => s.name === n.name), btn = document.createElement("button"); btn.className = "ghost"; btn.textContent = on ? "\ud83d\udc9b On shortlist" : "+ Shortlist";
+  btn.addEventListener("click", () => { if (shortlist.some((s) => s.name === n.name)) shortlist = shortlist.filter((s) => s.name !== n.name); else shortlist.push({ name: n.name, stars: 0 }); persist(); drawShort(); btn.textContent = shortlist.some((s) => s.name === n.name) ? "\ud83d\udc9b On shortlist" : "+ Shortlist"; });
+  d.append(b, g, m, o, btn); return d;
+}
+function show(idx, label) { $("results").classList.remove("hidden"); $("src").textContent = label; const box = $("list"); box.innerHTML = ""; idx.forEach((i, k) => box.append(card(i, k === 0))); if (!idx.length) box.innerHTML = '<p class="empty">No names match those filters. Try another letter or meaning.</p>'; }
+function keywordMatch(q) {
+  const ws = q.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !["the", "and", "something", "name", "means", "meaning"].includes(w)), g = $("gender").value, l = $("letter").value;
+  return names.map((n, i) => ({ i, n, s: ws.filter((w) => n.meaning.toLowerCase().split(/[^a-z]+/).some((x) => x === w || x === w + "s" || w === x + "s")).length }))
+    .filter((x) => x.s > 0 && (g === "any" || x.n.g === g || x.n.g === "unisex") && (!l || x.n.name[0] === l)).sort((a, b) => b.s - a.s).slice(0, 8).map((x) => x.i);
+}
+async function find() {
+  if (busy) { pending = true; return; }   // a search is running: do this one right after it
+  const q = $("q").value.trim(); if (!q) { $("note").textContent = "Type a meaning you love, or tap one of the examples."; return $("q").focus(); }
+  if (!names.length) { $("note").textContent = "The name list hasn't loaded. Is the server running?"; return; }
+  busy = true; $("go").classList.add("busy"); $("note").textContent = ai.ready ? "Searching names by meaning..." : "";
+  try { if (!ai.ready) throw new Error("not ready");
+    const res = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q, gender: $("gender").value, letter: $("letter").value }) }); const r = await res.json(); if (!res.ok) throw new Error(r.error);
+    show(r, "Names whose meaning is closest to \u201c" + q + "\u201d"); $("note").textContent = "";
+  } catch { show(keywordMatch(q), "Names with that word in their meaning"); $("note").textContent = ai.ready ? "" : "The AI is still loading, so this matched exact words. Try again soon to search by meaning."; }
+  busy = false; $("go").classList.remove("busy");
+  if (pending) { pending = false; find(); }
+}
+$("go").addEventListener("click", find); $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") find(); });
+function drawShort() {
+  const box = $("shortlist"); box.innerHTML = shortlist.length ? "" : '<p class="empty">Tap "+ Shortlist" on names you like, then rate them together.</p>'; const sur = $("surname").value.trim();
+  [...shortlist].sort((a, b) => b.stars - a.stars).forEach((s) => { const n = names.find((x) => x.name === s.name); const r = document.createElement("div"); r.className = "short"; const b = document.createElement("b"); b.textContent = s.name + (sur ? " " + sur : ""); const sp = document.createElement("span"); sp.textContent = n ? n.meaning + " \u00b7 " + n.origin : "";
+    const st = document.createElement("div"); st.className = "stars"; st.setAttribute("role", "group"); st.setAttribute("aria-label", "Rate " + s.name);
+    for (let k = 1; k <= 5; k++) { const x = document.createElement("button"); x.textContent = "\u2605"; x.className = k <= s.stars ? "on" : ""; x.setAttribute("aria-label", k + " stars"); x.addEventListener("click", () => { s.stars = s.stars === k ? 0 : k; persist(); drawShort(); }); st.append(x); }
+    const del = document.createElement("button"); del.className = "ghost"; del.textContent = "Remove"; del.addEventListener("click", () => { shortlist = shortlist.filter((k) => k !== s); persist(); drawShort(); }); r.append(b, sp, st, del); box.append(r); });
+}
+$("surname").addEventListener("input", () => { persist(); drawShort(); });
+$("copy").addEventListener("click", async () => { if (!shortlist.length) return; const sur = $("surname").value.trim(); const t = [...shortlist].sort((a, b) => b.stars - a.stars).map((s) => s.name + (sur ? " " + sur : "") + " " + "\u2605".repeat(s.stars)).join("\n"); try { await navigator.clipboard.writeText(t); $("copy").textContent = "Copied!"; } catch { $("copy").textContent = "Press Ctrl+C"; } setTimeout(() => ($("copy").textContent = "Copy shortlist"), 1200); });
+
+async function checkStatus() {
+  try { ai = await (await fetch("/api/status")).json();
+    if (ai.error) return setStatus("Search error: " + ai.error + ". Exact-word search still works.", "err");
+    if (ai.ready) return setStatus("Name search ready. It runs on your device.", "ok");
+    setStatus(ai.message + (ai.percent != null ? " " + ai.percent + "%" : "") + " Exact-word search works meanwhile.");
+  } catch { ai = { ready: false, error: "the server can't be reached" }; setStatus("Can't reach the server. Open http://localhost:3080 and make sure npm start is running.", "err"); return; }
+  setTimeout(checkStatus, 1500);
+}
+function setStatus(t, c = "") { $("status").textContent = t; $("status").className = c; }
+fetch("/api/names").then((r) => r.json()).then((n) => { names = n; drawShort(); }).catch(() => ($("note").textContent = "Couldn't load the name list. Is the server running?"));
+checkStatus();
+</script>
+</body>
+</html>
